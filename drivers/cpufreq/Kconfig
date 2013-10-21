@@ -241,11 +241,12 @@ config CPU_FREQ_GOV_ZZMOOVE
           % frequency steps to get smooth up/downscaling dependant on CPU load.
           If in doubt, say N.
 
-
 	  
 config CPU_FREQ_GOV_ONDEMANDPLUS
 	tristate "'ondemandplus' cpufreq governor"
-	depends on CPU_FREQ	  
+	depends on CPU_FREQ
+	help
+	  'ondemandplus' - better ondemand	  
             
 menu "x86 CPU frequency scaling drivers"
 depends on X86
