@@ -1904,7 +1904,8 @@ void mdss_mdp_pp_kcal_invert(struct kcal_lut_data *lut_data)
 	igc_config->block = MDP_LOGICAL_BLOCK_DISP_0;
 	igc_config->len = IGC_LUT_ENTRIES;
 
-	if (lut_data->invert) {
+	if (igc_mfd && lut_data->invert) {
+
 		igc_config->ops = MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE;
 		for (i = 0; i < IGC_LUT_ENTRIES; i++) {
 			igc_c0_c1[i] = (igc_Table_RGB[i] & 0xfff) |
@@ -1913,7 +1914,8 @@ void mdss_mdp_pp_kcal_invert(struct kcal_lut_data *lut_data)
 		}
 		igc_config->c0_c1_data = &igc_c0_c1[0];
 		igc_config->c2_data = &igc_c2[0];
-	} else 
+
+	} else if (igc_mfd && !lut_data->invert)
 		igc_config->ops = MDP_PP_OPS_WRITE | MDP_PP_OPS_DISABLE;
 
 	mdss_mdp_igc_lut_config(igc_config, &copyback, copy_from_kernel);
