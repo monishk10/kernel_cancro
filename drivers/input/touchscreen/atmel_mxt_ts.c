@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 // #include <linux/pm_runtime.h>
 #include <linux/pm_wakeup.h>
+#include <linux/input/wake_helpers.h>
 #include <linux/regulator/consumer.h>
 #include <linux/gpio.h>
 #include <linux/string.h>
@@ -612,6 +613,10 @@ struct mxt_data {
 	bool init_complete;
 	bool use_last_golden;
 	struct mutex golden_mutex;
+        bool is_wakeable;
+        bool is_suspended;
+        bool is_resumed;
+
 
 
 	/* Slowscan parameters	*/
@@ -2412,15 +2417,6 @@ i2c_error:
 static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 {
 	struct mxt_data *data = dev_id;
-//         struct input_dev *input_dev;
-        
-//         input_event(input_dev, EV_KEY, key_code, 1);
-// 	input_event(input_dev, EV_SYN, 0, 0);
-//         msleep(60);
-//         input_event(input_dev, EV_KEY, key_code, 0);
-// 	input_event(input_dev, EV_SYN, 0, 0);
-//         mxt_set_power_cfg(data, MXT_POWER_CFG_RUN);
-//         mxt_write_object(data,MXT_TOUCH_MULTI_T9, MXT_TOUCH_CTRL, 0x83);
 	if (data->T44_address)
 		return mxt_read_messages_t44(data);
 	else
@@ -4994,7 +4990,8 @@ static void mxt_stop(struct mxt_data *data)
 	if (data->is_stopped)
 		return;
 
-	error = mxt_set_power_cfg(data, MXT_POWER_CFG_DEEPSLEEP);
+        
+            error = mxt_set_power_cfg(data, MXT_POWER_CFG_DEEPSLEEP);
 
 	if (!error)
 		dev_dbg(dev, "MXT suspended\n");
@@ -5040,11 +5037,21 @@ static void mxt_clear_touch_event(struct mxt_data *data)
         struct i2c_client *client = to_i2c_client(dev);
         struct mxt_data *data = i2c_get_clientdata(client);
         struct input_dev *input_dev = data->input_dev;
-// // // 
-//           enable_irq_wake(data->irq);
-// 	disable_irq(client->irq);
-        enable_irq_wake(client->irq);
-// 
+
+        dev_warn(dev, "Entering suspend\n");
+        if (data->is_suspended) {
+            return 0;
+        }
+        
+//         dev_warn(dev, "disabling irq\n");
+// 	
+        
+        if (dt2w_switch == 1 && !in_phone_call()) {
+            dev_warn(dev, "Enabling irq wake\n");
+            enable_irq_wake(client->irq); 
+        } else {
+            disable_irq(client->irq);
+        }
         
 	data->safe_count = 0;
 	cancel_delayed_work_sync(&data->update_setting_delayed_work);
@@ -5053,35 +5060,36 @@ static void mxt_clear_touch_event(struct mxt_data *data)
 	mxt_adjust_self_setting(data, true, TYPE_SELF_INTTHR_SUSPEND);
 	mxt_anti_calib_control(data, true);
 	mxt_self_recalib_control(data, true);
-
-	mutex_lock(&input_dev->mutex);
-
-	if (input_dev->users)
+        dev_warn(dev, "anticalib complete\n");
+        
+        if (dt2w_switch == 0 || in_phone_call()) {
+            mutex_lock(&input_dev->mutex);
+            if (input_dev->users)
 		mxt_stop(data);
-
-	mutex_unlock(&input_dev->mutex);
-
+            mutex_unlock(&input_dev->mutex);
+            dev_warn(dev, "stopping touch\n");
+        }
+        
  	mxt_clear_touch_event(data);
 
-// 	if (data->regulator_vdd && data->regulator_avdd) {
-// 		ret = regulator_disable(data->regulator_avdd);
-// 		if (ret < 0) {
-// 			dev_err(dev,
-// 			"Atmel regulator disable for avdd failed: %d\n", ret);
-// 		}
-// 		ret = regulator_disable(data->regulator_vdd);
-// 		if (ret < 0) {
-// 			dev_err(dev,
-// 			"Atmel regulator disable for vdd failed: %d\n", ret);
-// 		}
-// 	}
-//         pm_runtime_disable(&data->input_dev);
-//         pm_runtime_set_suspended(&data->input_dev);
-//         pm_runtime_enable(&data->input_dev);
+	if (data->regulator_vdd && data->regulator_avdd) {
+		ret = regulator_disable(data->regulator_avdd);
+		if (ret < 0) {
+			dev_err(dev,
+			"Atmel regulator disable for avdd failed: %d\n", ret);
+		}
+		ret = regulator_disable(data->regulator_vdd);
+		if (ret < 0) {
+			dev_err(dev,
+			"Atmel regulator disable for vdd failed: %d\n", ret);
+		}
+            dev_warn(dev, "regulators disabled\n");
+	}
 
  	data->land_signed = 0;
  	data->self_restore_done = 0;
-
+        data->is_suspended = true;
+        data->is_resumed = false;
 	return 0;
 }
 
@@ -5094,6 +5102,10 @@ static int mxt_resume(struct device *dev)
 	struct i2c_client *client = to_i2c_client(dev);
 	struct mxt_data *data = i2c_get_clientdata(client);
 	struct input_dev *input_dev = data->input_dev;
+        dev_warn(dev, "Entering resume\n");
+        if (data->is_resumed) {
+            return 0;
+        }
 	if (data->regulator_vdd && data->regulator_avdd) {
 		ret = regulator_enable(data->regulator_vdd);
 		if (ret < 0) {
@@ -5109,26 +5121,25 @@ static int mxt_resume(struct device *dev)
 
 //         mxt_soft_reset(data, MXT_RESET_VALUE);
 //         mxt_chip_reset(data);
-	mutex_lock(&input_dev->mutex);
 
-	if (input_dev->users)
-		mxt_start(data);
-// 	input_event(data->input_dev, EV_KEY, KEY_POWER, 1);
-// 	input_event(data->input_dev, EV_SYN, 0, 0);
-// 	msleep(60);
-// 	input_event(data->input_dev, EV_KEY, KEY_POWER, 0);
-// 	input_event(data->input_dev, EV_SYN, 0, 0);
-// 	msleep(60);
-//         input_sync(data->input_dev);
-	mutex_unlock(&input_dev->mutex);
-        disable_irq_wake(client->irq);
-
-// 	enable_irq(client->irq);
         
-//         pm_runtime_disable(&data->input_dev);
-//         pm_runtime_set_active(&data->input_dev);
-//         pm_runtime_enable(&data->input_dev);
-
+            mutex_lock(&input_dev->mutex);
+            if (input_dev->users)
+                mxt_start(data);
+            dev_warn(dev, "Enabling touch\n");
+            mutex_unlock(&input_dev->mutex);
+        
+        if (dt2w_switch == 1 && !in_phone_call()) {
+            disable_irq_wake(client->irq);
+            dev_warn(dev, "disabling irq wake\n");
+        } else {
+            enable_irq(client->irq);
+        }
+        
+// 	
+//         dev_warn(dev, "Enabling irq \n");
+        data->is_resumed = true;
+        data->is_suspended = false;
 	return 0;
 }
 
@@ -5189,54 +5200,56 @@ static int mxt_input_disable(struct input_dev *in_dev)
 	return error;
 }
 
-// #ifdef CONFIG_FB
-// static int fb_notifier_cb(struct notifier_block *self,
-// 			unsigned long event, void *data)
-// {
-// 	struct fb_event *evdata = data;
-// 	int *blank;
-// 	struct mxt_data *mxt_data =
-// 		container_of(self, struct mxt_data, fb_notif);
-// 
-// 	if (evdata && evdata->data && event == FB_EVENT_BLANK && mxt_data) {
-// 		blank = evdata->data;
-// 		switch (*blank) {
-// 			case FB_BLANK_UNBLANK:
-// 			dev_info(&mxt_data->client->dev, "##### UNBLANK SCREEN #####\n");
-// 			mxt_input_enable(mxt_data->input_dev);
-//                         break;
-//                         case FB_BLANK_POWERDOWN:
-// 			case FB_BLANK_HSYNC_SUSPEND:
-// 			case FB_BLANK_VSYNC_SUSPEND:
-// 			case FB_BLANK_NORMAL: 
-// 			dev_info(&mxt_data->client->dev, "##### BLANK SCREEN #####\n");
-// 			mxt_input_disable(mxt_data->input_dev);
-//                         break;
-// 		}
-// 	}
-// 
-// 	return NOTIFY_OK;
-// }
 
-// static void configure_sleep(struct mxt_data *data)
-// {
-// 	int ret;
-// 
-// 	data->fb_notif.notifier_call = fb_notifier_cb;
-// 	ret = fb_register_client(&data->fb_notif);
-// 	if (ret) {
-// 		dev_err(&data->client->dev,
-// 			"Unable to register fb_notifier, err: %d\n", ret);
-// 	}
-// }
-// #else
-// static void configure_sleep(struct mxt_data *data)
-// {
-// 	data->input_dev->enable = mxt_input_enable;
-// 	data->input_dev->disable = mxt_input_disable;
-// 	data->input_dev->enabled = true;
-// }
-// #endif
+#ifdef CONFIG_FB
+static int fb_notifier_cb(struct notifier_block *self,
+			unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int *blank;
+        struct device *dev;
+	struct mxt_data *mxt_data =
+		container_of(self, struct mxt_data, fb_notif);
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK && mxt_data) {
+		blank = evdata->data;
+		switch (*blank) {
+			case FB_BLANK_UNBLANK:
+			dev_info(&mxt_data->client->dev, "##### UNBLANK SCREEN #####\n");
+			mxt_input_enable(mxt_data->input_dev);
+                        break;
+                        case FB_BLANK_POWERDOWN:
+			case FB_BLANK_HSYNC_SUSPEND:
+			case FB_BLANK_VSYNC_SUSPEND:
+			case FB_BLANK_NORMAL: 
+			dev_info(&mxt_data->client->dev, "##### BLANK SCREEN #####\n");
+			mxt_input_disable(mxt_data->input_dev);
+                        break;
+		}
+	}
+
+	return NOTIFY_OK;
+}
+
+static void configure_sleep(struct mxt_data *data)
+{
+	int ret;
+
+	data->fb_notif.notifier_call = fb_notifier_cb;
+	ret = fb_register_client(&data->fb_notif);
+	if (ret) {
+		dev_err(&data->client->dev,
+			"Unable to register fb_notifier, err: %d\n", ret);
+	}
+}
+#else
+static void configure_sleep(struct mxt_data *data)
+{
+	data->input_dev->enable = mxt_input_enable;
+	data->input_dev->disable = mxt_input_disable;
+	data->input_dev->enabled = true;
+}
+#endif
 
 
 static int mxt_initialize_input_device(struct mxt_data *data)
