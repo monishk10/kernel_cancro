@@ -282,7 +282,7 @@
 			<0xff 256>, /* sdcc_pwr_cmd_irq */
 			<0xff 268>, /* bam_irq[1] */
 			<0xff 270>, /* bam_irq[0] */
-			<0xff 271>; /* bam_irq[0] */
+			<0xff 271>;
 
 		qcom,gpio-parent = <&msmgpio>;
 		qcom,gpio-map = <3  102>,

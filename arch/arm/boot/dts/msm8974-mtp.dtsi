@@ -97,6 +97,7 @@
 			atmel,irq-gpio = <&msmgpio 54 0x2008>;
 			atmel,power-gpio = <&msmgpio 48 0x00>;
 			atmel,mxt-fw-name = "mxT540SC30.fw";
+			atmel,i2c-pull-up;
 			atmel,unlock-move-threshold = <90000>;
 			atmel,staying-threshold = <5>;
 			atmel,landing-threshold = <8>;

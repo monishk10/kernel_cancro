@@ -891,6 +891,8 @@
 		reg-names = "qup_phys_addr";
 		interrupts = <0 96 0>;
 		interrupt-names = "qup_err_intr";
+		qcom,active-only;
+                qcom,clk-ctl-xfer;
 		qcom,i2c-bus-freq = <384000>;
 		qcom,i2c-src-freq = <19200000>;
 		qcom,master-id = <86>;

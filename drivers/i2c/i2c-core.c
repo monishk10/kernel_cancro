@@ -118,8 +118,7 @@ static int i2c_device_probe(struct device *dev)
 		return -ENODEV;
 	client->driver = driver;
 	if (!device_can_wakeup(&client->dev))
-		device_init_wakeup(&client->dev,
-					client->flags & I2C_CLIENT_WAKE);
+        device_init_wakeup(&client->dev,client->flags & I2C_CLIENT_WAKE);
 	dev_dbg(dev, "probe\n");
 
 	status = driver->probe(client, i2c_match_id(driver->id_table, client));
