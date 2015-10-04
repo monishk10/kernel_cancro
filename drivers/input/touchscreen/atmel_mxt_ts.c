@@ -1903,9 +1903,7 @@ static void mxt_proc_t102_messages(struct mxt_data *data, u8 *msg)
 
 static int mxt_proc_message(struct mxt_data *data, u8 *msg)
 {
-        struct device *dev = &data->client->dev;
 	u8 report_id = msg[0];
-        dev_warn(dev, "report_id is %u\n", report_id);
 
 	if (report_id == MXT_RPTID_NOMSG)
 		return -1;
@@ -1917,42 +1915,31 @@ static int mxt_proc_message(struct mxt_data *data, u8 *msg)
 	if (report_id >= data->T9_reportid_min
 	    && report_id <= data->T9_reportid_max) {
 		mxt_proc_t9_messages(data, msg);
-                dev_warn(dev, "processing t9\n");
 	} else if (report_id >= data->T63_reportid_min
 		   && report_id <= data->T63_reportid_max) {
-                dev_warn(dev, "processing t63\n");
 		mxt_proc_t63_messages(data, msg);
 	} else if (report_id >= data->T15_reportid_min
 		   && report_id <= data->T15_reportid_max) {
-            dev_warn(dev, "processing t15\n");
 		mxt_proc_t15_messages(data, msg);
 	} else if (report_id >= data->T19_reportid_min
 		   && report_id <= data->T19_reportid_max) {
-            dev_warn(dev, "processing t19\n");
 		mxt_proc_t19_messages(data, msg);
 	} else if (report_id >= data->T25_reportid_min
 		   && report_id <= data->T25_reportid_max) {
-            dev_warn(dev, "processing t25\n");
 		mxt_proc_t25_messages(data, msg);
 	} else if (report_id == data->T6_reportid) {
-            dev_warn(dev, "processing t6\n");
 		mxt_proc_t6_messages(data, msg);
 	} else if (report_id == data->T48_reportid) {
-            dev_warn(dev, "processing t48\n");
 		mxt_proc_t48_messages(data, msg);
 	} else if (report_id >= data->T42_reportid_min
 		   && report_id <= data->T42_reportid_max) {
-            dev_warn(dev, "processing t42\n");
 		mxt_proc_t42_messages(data, msg);
 	} else if (report_id == data->T66_reportid) {
-            dev_warn(dev, "processing t66\n");
 		mxt_proc_t66_messages(data, msg);
 	} else if (report_id >= data->T100_reportid_min
 		   && report_id <= data->T100_reportid_max) {
-            dev_warn(dev, "processing t100\n");
 		mxt_proc_t100_messages(data, msg);
 	} else if (report_id == data->T102_reportid) {
-            dev_warn(dev, "processing t102\n");
 		mxt_proc_t102_messages(data, msg);
 	}
 
@@ -3442,15 +3429,15 @@ static ssize_t mxt_update_fw_show(struct device *dev,
 
 static void mxt_enable_irq(struct mxt_data *data) {
 
-	if (!data->irq_enabled) {
-		mxt_enable_irq(data);
+	if (likely(!data->irq_enabled)) {
+		enable_irq(data->irq);
 		data->irq_enabled=true;
 	}
 }
 
 static void mxt_disable_irq(struct mxt_data *data) {
 	
-	if(data->irq_enabled) {
+	if(likely(data->irq_enabled)) {
 		disable_irq(data->irq);
 		data->irq_enabled=false;
 	}
@@ -5033,10 +5020,11 @@ static void mxt_clear_touch_event(struct mxt_data *data)
         
         if (dt2w_switch == 1 && !in_phone_call()) {
             dev_warn(dev, "Enabling irq wake\n");
-            enable_irq_wake(client->irq);
+            enable_irq_wake(data->client->irq);
             data->is_stopped = 1;
         } else {
                 mxt_disable_irq(data);
+		dev_warn(dev, "Irq disabled\n");
                 data->safe_count = 0;
                 cancel_delayed_work_sync(&data->disable_anticalib_delayed_work);
                 mutex_lock(&input_dev->mutex);
@@ -5106,7 +5094,7 @@ static int mxt_resume(struct device *dev)
             mutex_unlock(&input_dev->mutex);
          
         if (dt2w_switch == 1 && !in_phone_call()) {
-            disable_irq_wake(client->irq);
+            disable_irq_wake(data->client->irq);
             dev_warn(dev, "disabling irq wake\n");
         } 
        
