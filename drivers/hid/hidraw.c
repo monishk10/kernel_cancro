@@ -296,6 +296,13 @@ out:
 
 }
 
+static int hidraw_fasync(int fd, struct file *file, int on)
+{
+	struct hidraw_list *list = file->private_data;
+
+	return fasync_helper(fd, file, on, &list->fasync);
+}
+
 static void drop_ref(struct hidraw *hidraw, int exists_bit)
 {
 	if (exists_bit) {
