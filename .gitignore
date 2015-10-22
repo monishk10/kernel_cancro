@@ -86,5 +86,6 @@ GTAGS
 
 *.orig
 zip/*.zip
+zip/kernel_zip/zImage
 *~
 \#*#
