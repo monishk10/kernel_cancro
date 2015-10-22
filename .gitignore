@@ -85,5 +85,6 @@ GSYMS
 GTAGS
 
 *.orig
+zip/*.zip
 *~
 \#*#
