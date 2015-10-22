@@ -86,4 +86,6 @@ GTAGS
 
 *.orig
 *~
+*.sh
+\zip
 \#*#
