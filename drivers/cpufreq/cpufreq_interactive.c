@@ -68,7 +68,7 @@ static struct mutex gov_lock;
 static unsigned int hispeed_freq;
 
 /* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 90
+#define DEFAULT_GO_HISPEED_LOAD 99
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 
 /* Sampling down factor to be applied to min_sample_time at max freq */
@@ -113,8 +113,6 @@ static int boost_val;
 static int boostpulse_duration_val = DEFAULT_MIN_SAMPLE_TIME;
 /* End time of boost pulse in ktime converted to usecs */
 static u64 boostpulse_endtime;
-
-static bool boosted;
 
 /*
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
@@ -169,19 +167,6 @@ static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
 		*wall = jiffies_to_usecs(cur_wall_time);
 
 	return jiffies_to_usecs(idle_time);
-}
-
-static inline cputime64_t get_cpu_idle_time(unsigned int cpu,
-					    cputime64_t *wall)
-{
-	u64 idle_time = get_cpu_idle_time_us(cpu, wall);
-
-	if (idle_time == -1ULL)
-		idle_time = get_cpu_idle_time_jiffy(cpu, wall);
-	else if (!io_is_busy)
-		idle_time += get_cpu_iowait_time_us(cpu, wall);
-
-	return idle_time;
 }
 
 static void cpufreq_interactive_timer_resched(
@@ -397,6 +382,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	unsigned int loadadjfreq;
 	unsigned int index;
 	unsigned long flags;
+	bool boosted;
 	unsigned long mod_min_sample_time;
 	int i, max_load;
 	unsigned int max_freq;
@@ -672,8 +658,6 @@ static void cpufreq_interactive_boost(void)
 	int anyboost = 0;
 	unsigned long flags;
 	struct cpufreq_interactive_cpuinfo *pcpu;
-
-	boosted = true;
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags);
 
@@ -1035,10 +1019,8 @@ static ssize_t store_boost(struct kobject *kobj, struct attribute *attr,
 
 	if (boost_val) {
 		trace_cpufreq_interactive_boost("on");
-		if (!boosted)
-			cpufreq_interactive_boost();
+		cpufreq_interactive_boost();
 	} else {
-		boostpulse_endtime = ktime_to_us(ktime_get());
 		trace_cpufreq_interactive_unboost("off");
 	}
 
@@ -1059,8 +1041,7 @@ static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
 
 	boostpulse_endtime = ktime_to_us(ktime_get()) + boostpulse_duration_val;
 	trace_cpufreq_interactive_boost("pulse");
-	if (!boosted)
-		cpufreq_interactive_boost();
+	cpufreq_interactive_boost();
 	return count;
 }
 
