@@ -2,7 +2,7 @@
 
 ########################################################
 #
-# Custom Kernel Settings for God's Kernel!!
+# Custom Kernel Settings for Moshi's Kernel!!
 #
 ########################################################
 
@@ -66,16 +66,16 @@ if [ -e /data/godtest.log ]; then
 	rm /data/godtest.log
 fi
 
-echo  Kernel script is working !!! >> /data/logmoshi.log
-echo "excecuted on $(date +"%d-%m-%Y %r" )" >> /data/logmoshi.log
-echo  Done ! >> /data/logmoshi.log
+echo  Kernel script is working !!! >> /data/godtest.log
+echo "excecuted on $(date +"%d-%m-%Y %r" )" >> /data/godtest.log
+echo  Done ! >> /data/godtest.log
 
 ########################################################
 #FSTRIM
 #
-$BBX fstrim -v /system >> /data/logmoshi.log
-$BBX fstrim -v /cache >> /data/logmoshi.log
-$BBX fstrim -v /data >> /data/logmoshi.log
+$BBX fstrim -v /system >> /data/godtest.log
+$BBX fstrim -v /cache >> /data/godtest.log
+$BBX fstrim -v /data >> /data/godtest.log
 
 
 stop mpdecision

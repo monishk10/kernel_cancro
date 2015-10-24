@@ -65,7 +65,7 @@ fi
 res1=$(date +%s.%N)
      
 echo -e "${bldcya}#####################################################${txtrst}"
-echo -e "${bldcya}##############${bldblu}STARTING.MOSHI.BUILD${bldcya}###################${txtrst}"
+echo -e "${bldcya}##############${bldred}STARTING.MOSHI.BUILD${bldcya}###################${txtrst}"
 echo -e "${bldcya}#####################################################${txtrst}"
 make -j12
 
