@@ -2,7 +2,7 @@
 
 ########################################################
 #
-# Custom Kernel Settings for God's Kernel!!
+# Custom Kernel Settings for Moshi's Kernel!!
 #
 ########################################################
 
@@ -62,8 +62,8 @@ fi
 # kernel custom test
 #
 
-if [ -e /data/godtest.log ]; then
-	rm /data/godtest.log
+if [ -e /data/logmoshi.log ]; then
+	rm /data/logmoshi.log
 fi
 
 echo  Kernel script is working !!! >> /data/logmoshi.log

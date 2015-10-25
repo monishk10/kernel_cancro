@@ -30,7 +30,6 @@ ui_print " ";
 mkdir -p /tmp/anykernel;
 cd /tmp/anykernel;
 unzip -o $ZIP;
-
 ui_print " ";
 ui_print " ";
 ui_print "AnyKernel2 by osm0sis @ xda-developers";
@@ -48,6 +47,7 @@ ui_print "      |  || \__// |  ||    ____/  //            ";
 ui_print "      |__||       |__||O /_______//  HI         ";
 ui_print "                                                ";
 ui_print "***********************************************";
+ui_print " ";
 ui_print " ";
 ui_print " ";
 /sbin/busybox mount /system;
@@ -99,8 +99,7 @@ fi;
 
 umount /system;
 ui_print " ";
-ui_print "Welcome to Moshi";
-ui_print " ";
+ui_print "Welcome to moshi ";
 ui_print "AnyKernel2 by osm0sis@xda";
 ui_print " ";
 
