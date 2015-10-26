@@ -1,102 +1,219 @@
 #!/bin/bash
- 
-# Colorize and add text parameters
-red=$(tput setaf 1) 		# red
-grn=$(tput setaf 2)             #  green
-cya=$(tput setaf 6) 		# cyan
-txtbld=$(tput bold)             # Bold
-bldred=${txtbld}$(tput setaf 1) # red
-bldgrn=${txtbld}$(tput setaf 2) #  green
-bldblu=${txtbld}$(tput setaf 4) #  blue
-bldcya=${txtbld}$(tput setaf 6) # cyan
-txtrst=$(tput sgr0)             # Reset
+ #
+ # Copyright © 2014, Monish Kapadia "assasin.monish" <monishk10@yahoo.com>
+ #
+ # Custom Build script for ease.
+ #
+ # This software is licensed under the terms of the GNU General Public
+ # License version 2, as published by the Free Software Foundation, and
+ # may be copied, distributed, and modified under those terms.
+ #
+ # This program is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ # GNU General Public License for more details.
+ #
+ # Please maintain this if you use this script or any part of it
+ #
 
-# CURRENT DIRECTORY WHERE YOU HAVE YOUR KERNEL SOURCE 
-KERNEL_DIR=~/kernel/sync/kernel_cancro
-# OUTPUT FOLDER WHERE YOU HAVE YOU ANYKERNEL TEMPLET N DTBTOOLCM
-KERNEL_OUT=~/kernel/sync/kernel_cancro/zip/kernel_zip
-# TOOLCHAIN PATH FOR STRIPING TOOLCHAINS
-STRIP=/home/monish/arm-eabi-5.2/bin/arm-eabi-strip
- 
-#Clean the build
-echo -n "${bldcya} Do you wanna clean the build (y/n)? ${txtrst}"
-read answer
-if echo "$answer" | grep -iq "^y" ;then
-    echo -e "${bldgrn} Cleaning the old build ${txtrst}"
-    make mrproper
-    rm -rf $KERNEL_OUT/dtb
-    rm -rf $KERNEL_OUT/zImage
-    rm -rf $KERNEL_OUT/../*.zip
-    rm -rf $KERNEL_OUT/modules/*
-    rm -rf $KERNEL_DIR/arch/arm/boot/*.dtb
-fi
-     
-echo -e "${bldgrn} Setting up Build Environment ${txtrst}"
+# Bash Color
+blink_red='\033[05;31m'
+red=$(tput setaf 1) 		  # red
+green=$(tput setaf 2)             # green
+cyan=$(tput setaf 6) 		  # cyan
+txtbld=$(tput bold)               # Bold
+bldred=${txtbld}$(tput setaf 1)   # red
+bldgrn=${txtbld}$(tput setaf 2)   # green
+bldblu=${txtbld}$(tput setaf 4)   # blue
+bldcya=${txtbld}$(tput setaf 6)   # cyan
+restore=$(tput sgr0)              # Reset
+clear
+
+# Resources
+THREAD="-j12"
+KERNEL="zImage"
+DTBIMAGE="dtb"
+DEFCONFIG="cancro_user_defconfig"
+device="cancro"
+
+# Kernel Details
+BASE_MOSHI_VER="moshi"
+VER="v3"
+MOSHI_VER="$BASE_MOSHI_VER$VER"
+
+# Vars
+export CROSS_COMPILE="/home/monish/arm-eabi-5.2/bin/arm-eabi-"
+export ARCH=arm
+export SUBARCH=arm
 export KBUILD_BUILD_USER="monish"
 export KBUILD_BUILD_HOST="beast"
-export ARCH=arm
+# Paths
+#STRIP=/toolchain-path/arm-eabi-strip
+STRIP=/home/monish/arm-eabi-5.2/bin/arm-eabi-strip
+KERNEL_DIR=`pwd`
+REPACK_DIR="$KERNEL_DIR/zip/kernel_zip"
+PATCH_DIR="$KERNEL_DIR/zip/kernel/patch"
+ZIMAGE_DIR="$KERNEL_DIR/arch/arm/boot"
+# Functions
 
-#ADD THE CORRECT TOOLCHAIN PATH 
+function make_dtb {
+		$REPACK_DIR/tools/dtbToolCM -2 -o $REPACK_DIR/$DTBIMAGE -s 2048 -p scripts/dtc/ arch/arm/boot/
 
-export CROSS_COMPILE=/home/monish/arm-eabi-5.2/bin/arm-eabi-
-     
-     
-echo -e "${bldgrn} Building Defconfig ${txtrst}"
+}
+function clean_all {
+		make clean && make mrproper
+}
 
-# DEFCONFIG NAME YOU WILL BE USING
+function make_kernel {
+		echo
+		make $DEFCONFIG
+		make $THREAD
+		cp -vr $ZIMAGE_DIR/$KERNEL $REPACK_DIR/zImage
+}
 
-make cancro_user_defconfig 
-     
-echo -n "${bldblu}Do you wanna make changes in the defconfig (y/n)? ${txtrst}"
-read answer
-if echo "$answer" | grep -iq "^y" ;then
-        echo -e "${bldgrn} Building Defconfig GUI ${txtrst}"
-    make menuconfig
-     
-    echo -n "${bldblu}Do you wanna save the changes in the defconfig (y/n)? ${txtrst}"
-    read answer
-	    if echo "$answer" | grep -iq "^y" ;then
-	        echo -e "${bldgrn} Building Defconfig GUI ${txtrst}"
-	        cp -f .config $KERNEL_DIR/arch/arm/configs/cancro_user_defconfig
-    fi
+function make_zip {
+		cd $REPACK_DIR
+		zip -r9 ~/builds/$MOSHI_F/MOSHI-$MOSHI_F-$(date +%d-%m_%H%M)-$VER.zip *
+}
+
+function copy_modules {
+		echo "Copying modules"
+		find . -name '*.ko' -exec cp {} $REPACK_DIR/modules/ \;
+		echo "Stripping modules for size"
+		$STRIP --strip-unneeded $REPACK_DIR/modules/*.ko
+}
+
+DATE_START=$(date +"%s")
+
+echo -e "${bldred}"; echo -e "${blink_red}"; echo "$AK_VER"; echo -e "${restore}";
+
+echo -e "${bldgrn}"
+echo "-----------------"
+echo "Making MOSHI Kernel:"
+echo "-----------------"
+echo -e "${restore}"
+
+case "$1" in
+clean|cleanbuild)
+clean_all
+make_kernel
+make_dtb
+if [ -e "arch/arm/boot/zImage" ]; then
+make_zip
+else
+echo -e "Error Occurred"
+echo -e "zImage not found"
 fi
-     
-# Time of build startup
-res1=$(date +%s.%N)
-     
-echo -e "${bldcya}#####################################################${txtrst}"
-echo -e "${bldcya}##############${bldblu}STARTING.MOSHI.BUILD${bldcya}###################${txtrst}"
-echo -e "${bldcya}#####################################################${txtrst}"
-make -j12
-
-if ! [ -a  $KERNEL_DIR/arch/arm/boot/zImage ];
-    then
-    echo -e "${bldblu} Kernel Compilation failed! Fix the errors! ${txtrst}"
-    exit 1
+;;
+dirty)
+make_kernel
+make_dtb
+if [ -e "arch/arm/boot/zImage" ]; then
+make_zip
+else
+echo -e "Error Occurred"
+echo -e "zImage not found"
 fi
-mv $KERNEL_DIR/arch/arm/boot/zImage  $KERNEL_OUT/zImage
-     
-echo "Copying modules"
-find . -name '*.ko' -exec cp {} $KERNEL_OUT/modules/ \;
-echo "Stripping modules for size"
-$STRIP --strip-unneeded $KERNEL_OUT/modules/*.ko
+;;
+*)
+echo -e "${bldblu}"
+while read -p "Which branch (oc/dt2w/dt2w-oc/stock)? " mchoice
+echo -e "${bldred}"
+do
+case "$mchoice" in
+	oc|OC )
+		MOSHI_F="oc"
+		echo
+		echo "Named oc"
+		break
+		;;
+	dt2w|DT2W )
+		MOSHI_F="dt2w"
+		echo
+		echo "Named dt2w"
+		break
+		;;
+	DT2W-OC|dt2w-oc )
+		MOSHI_F="dt2w-oc"
+		echo
+		echo "Named dt2w-oc"
+		break
+		;;
+	stock|STOCK )
+		MOSHI_F="stock"
+		echo
+		echo "stock"
+		break
+		;;
+	* )
+		echo
+		echo "Invalid try again!"
+		echo
+		;;
+esac
+done
+echo -e "${bldgrn}"
+while read -p "Do you want to clean stuff (y/n)? " cchoice
+do
+case "$cchoice" in
+	y|Y )
+		clean_all
+		echo
+		echo "All Cleaned now."
+		break
+		;;
+	n|N )
+		break
+		;;
+	* )
+		echo
+		echo "Invalid try again!"
+		echo
+		;;
+esac
+done
+echo -e "${restore}"
+echo
+echo -e "${txtbld}"
+while read -p "Do you want to build kernel (y/n)? " dchoice
+echo -e "${restore}"
+do
+case "$dchoice" in
+	y|Y)
+		make_kernel
+		make_dtb
+		copy_modules
+		if [ -e "arch/arm/boot/zImage" ]; then
+		make_zip
+		fi
+		break
+		;;
+	n|N )
+		break
+		;;
+	* )
+		echo
+		echo "Invalid try again!"
+		echo
+		;;
+esac
+done
+;;
+esac
+echo -e "${bldgrn}"
+echo "MOSHI-$MOSHI_F-$(date +%d-%m_%H%M)-$VER.zip"
+echo -e "${bldred}"
+echo "################################################################################"
+echo -e "${bldgrn}"
+echo "------------------------Moshi Kernel Compiled in:-------------------------------"
+echo -e "${bldred}"
+echo "################################################################################"
+echo -e "${restore}"
 
-echo -e "${bldgrn} DTB Build  ${txtrst}"
-.$KERNEL/zip/dtbToolCM -2 -o $KERNEL_OUT/dtb -s 2048 -p scripts/dtc/ arch/arm/boot/
+DATE_END=$(date +"%s")
+DIFF=$(($DATE_END - $DATE_START))
+echo -e "${bldblu}"
+echo "Time: $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
+echo -e "${restore}"
+echo
 
-if ! [ -a $KERNEL_OUT/dtb ];
-    then
-    echo -e "${bldblu} DTB Compilation failed! Fix the errors! ${txtrst}"
-    exit 1
-fi
-     
-echo -e "${bldgrn} Zipping the Kernel Build  ${txtrst}"
-cd $KERNEL_OUT/
-zip -r ../MOSHI_Cancro_$(date +%d%m%Y_%H%M) .
-
-OUTZIP=$(find ../*.zip)
-cd $KERNEL_DIR
-
-# Get elapsed time
-res2=$(date +%s.%N)
-echo "${bldgrn}$OUTZIP Compiled Succuessfully in ${txtrst}${bldgrn}$(echo "($res2 - $res1) / 60"|bc ) minutes ($(echo "$res2 - $res1"|bc ) seconds) ${txtrst}"
