@@ -6,7 +6,7 @@
 kernel.string=Moshi Kernel by assasin.monish @xda-developers
 do.devicecheck=1
 do.initd=0
-do.modules=0
+do.modules=1
 do.cleanup=0
 device.name1=cancro
 device.name2=aosp_cancro
