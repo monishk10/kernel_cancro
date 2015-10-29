@@ -10,6 +10,8 @@ do.modules=1
 do.cleanup=0
 device.name1=cancro
 device.name2=aosp_cancro
+device.name3=cm_cancro
+device.name4=omni_cancro
 
 # shell variables
 block=/dev/block/platform/msm_sdcc.1/by-name/boot;
