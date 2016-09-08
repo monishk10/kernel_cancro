@@ -42,9 +42,9 @@ echo "$time"
 function adbstart {
 		echo
 		adb devices
-		adb kill-server
-		sudo adb start-server
-		adb devices
+		#adb kill-server
+		#sudo adb start-server
+		#adb devices
 }
 
 function sideloadstart {
