@@ -81,6 +81,11 @@ GRTAGS
 GSYMS
 GTAGS
 
+arch/arm/boot/dt.img
+kernel/hz.bc
+patch-3.4.112
+
+
 zip/*
 
 *.orig
